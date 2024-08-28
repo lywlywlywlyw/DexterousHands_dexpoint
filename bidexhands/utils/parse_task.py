@@ -35,14 +35,15 @@ from bidexhands.tasks.shadow_hand_meta.shadow_hand_meta_mt1 import ShadowHandMet
 from bidexhands.tasks.shadow_hand_meta.shadow_hand_meta_ml1 import ShadowHandMetaML1
 from bidexhands.tasks.shadow_hand_meta.shadow_hand_meta_mt4 import ShadowHandMetaMT4
 
-from bidexhands.tasks.hand_base.vec_task import VecTaskCPU, VecTaskGPU, VecTaskPython, VecTaskPythonArm
+from bidexhands.tasks.hand_base.vec_task import VecTaskCPU, VecTaskGPU, VecTaskPython, VecTaskPythonArm,VecTaskPythonDexpoint
 from bidexhands.tasks.hand_base.multi_vec_task import MultiVecTaskPython, SingleVecTaskPythonArm
 from bidexhands.tasks.hand_base.multi_task_vec_task import MultiTaskVecTaskPython
 from bidexhands.tasks.hand_base.meta_vec_task import MetaVecTaskPython
 from bidexhands.tasks.hand_base.vec_task_rlgames import RLgamesVecTaskPython
 
 from bidexhands.utils.config import warn_task_name
-
+from dexpoint.env.rl_env.relocate_env import AllegroRelocateRLEnv
+from dexpoint.real_world import task_setting
 import json
 
 
@@ -98,6 +99,20 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
             env = VecTaskPythonArm(task, rl_device)
         else :
             env = VecTaskPython(task, rl_device)
+    elif args.task_type == "DexPoint":
+        print("DexPoint")
+        try:
+            task=AllegroRelocateRLEnv(cfg=cfg, object_name="mustard_bottle", rotation_reward_weight=0,
+                          randomness_scale=1, use_visual_obs=True, use_gui=True,
+                          no_rgb=True,device="cuda")
+            task.setup_camera_from_config(task_setting.CAMERA_CONFIG["relocate"])
+            task.setup_visual_obs_config(task_setting.OBS_CONFIG["relocate_noise"])
+            task.setup_imagination_config(task_setting.IMG_CONFIG["relocate_robot_only"])
+        except NameError as e:
+            print(e)
+            warn_task_name()
+        env = VecTaskPythonDexpoint(task,rl_device)
+
 
     elif args.task_type == "MultiAgent":
         print("MultiAgent")

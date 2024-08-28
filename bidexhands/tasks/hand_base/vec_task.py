@@ -137,7 +137,30 @@ class VecTaskPython(VecTask):
         self.task.step(actions)
 
         return torch.clamp(self.task.obs_buf, -self.clip_obs, self.clip_obs).to(self.rl_device)
-    
+
+class VecTaskPythonDexpoint(VecTask):
+    # 返回状态，目前返回的是观测空间
+    def get_state(self):
+        current_obs=self.task.get_observation()
+        state_array = np.concatenate([value.flatten() for value in current_obs.values()])
+        return torch.tensor([state_array], dtype=torch.float32).to(self.rl_device)
+
+    def step(self, actions):
+    # 前进一步更新环境，并返回观测空间、奖励值、该episode是否终止、额外信息
+        self.task.render()
+        if actions.is_cuda:
+            actions = actions.cpu()
+        actions = actions.numpy()
+        obs, reward, done, extra = self.task.step(actions[0])
+        state_array = np.concatenate([value.flatten() for value in obs.values()])
+        return torch.tensor([state_array], dtype=torch.float32).to(self.rl_device), torch.tensor([reward], dtype=torch.float32).to(self.rl_device), torch.tensor([int(done)]).to(self.rl_device), {'1':torch.tensor([0.0], dtype=torch.float32)}
+
+    def reset(self):
+    # 重置环境，并返回观测空间
+        current_obs = self.task.reset()
+        state_array = np.concatenate([value.flatten() for value in current_obs.values()])
+        return torch.tensor([state_array], dtype=torch.float32).to(self.rl_device)
+
 class VecTaskPythonArm(VecTask) :
 
     def get_state(self):
